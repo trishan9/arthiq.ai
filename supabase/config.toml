@@ -1,0 +1,13 @@
+project_id = "pmqdkgogwgnxyxxjyokp"
+
+[functions.process-document]
+verify_jwt = false
+
+[functions.financial-advisor]
+verify_jwt = false
+
+[functions.blockchain-verify]
+verify_jwt = false
+
+[functions.regulation-insights]
+verify_jwt = false
