@@ -43,7 +43,7 @@ const Sidebar = () => {
         isCollapsed ? "w-20" : "w-64"
       )}
     >
-
+      {/* Logo */}
       <div className="p-4 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-accent flex items-center justify-center flex-shrink-0">
@@ -121,12 +121,12 @@ const Sidebar = () => {
           isCollapsed ? "justify-center" : ""
         )}>
           <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-accent-foreground">JD</span>
+            <span className="text-sm font-bold text-accent-foreground">TW</span>
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-sidebar-foreground truncate">John Doe</div>
-              <div className="text-xs text-sidebar-foreground/50 truncate">john@example.com</div>
+              <div className="text-sm font-medium text-sidebar-foreground truncate">Trishan Wagle</div>
+              <div className="text-xs text-sidebar-foreground/50 truncate">mailtotrishan@gmail.com</div>
             </div>
           )}
           {!isCollapsed && (
