@@ -40,7 +40,9 @@ export function ThresholdAlertsCard({ alerts }: ThresholdAlertsCardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">No threshold alerts at this time.</p>
+          <p className="text-sm text-muted-foreground">
+            No threshold alerts at this time.
+          </p>
         </CardContent>
       </Card>
     );
@@ -56,7 +58,9 @@ export function ThresholdAlertsCard({ alerts }: ThresholdAlertsCardProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {alerts.map((alert, index) => {
-          const config = statusConfig[alert.status];
+          const validStatus =
+            alert.status && statusConfig[alert.status] ? alert.status : "below";
+          const config = statusConfig[validStatus];
           const StatusIcon = config.icon;
 
           return (
@@ -76,7 +80,7 @@ export function ThresholdAlertsCard({ alerts }: ThresholdAlertsCardProps) {
                       {config.label}
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 mt-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Current: </span>
@@ -84,11 +88,15 @@ export function ThresholdAlertsCard({ alerts }: ThresholdAlertsCardProps) {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Threshold: </span>
-                      <span className="font-medium">{alert.thresholdValue}</span>
+                      <span className="font-medium">
+                        {alert.thresholdValue}
+                      </span>
                     </div>
                   </div>
-                  
-                  <p className="text-sm text-muted-foreground mt-2">{alert.implication}</p>
+
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {alert.implication}
+                  </p>
                 </div>
               </div>
             </div>
