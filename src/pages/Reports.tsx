@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { FileText, Download, Calendar, Clock, CheckCircle, Plus, Loader2, Building2, FileCheck, Landmark } from "lucide-react";
+import { FileText, Download, Calendar, Clock, LandmarkIcon, CheckCircle, Plus, Loader2, Building2, FileCheck, Landmark, BarChart2, PieChart, File, TrendingUp, Scale, Users, Folder, FileChartColumnIncreasing } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { useRegulationInsights } from "@/hooks/useRegulationInsights";
-import { 
-  generateFinancialHealthReport, 
-  generateVATReport, 
+import {
+  generateFinancialHealthReport,
+  generateVATReport,
   generateLoanApplicationReport,
   generateTransactionReport,
   generateComplianceReport,
-  downloadPDF 
+  downloadPDF
 } from "@/lib/pdfReportGenerator";
 import {
   generateVATReturnForm,
@@ -41,21 +41,21 @@ const analyticsTemplates = [
     id: "financial-health",
     name: "Financial Health Report",
     description: "Overall business financial health analysis",
-    icon: "💹",
+    icon: FileChartColumnIncreasing,
     category: "Analysis",
   },
   {
     id: "transaction-report",
     name: "Transaction Report",
     description: "Detailed list of all transactions from your documents",
-    icon: "📊",
+    icon: PieChart,
     category: "Analysis",
   },
   {
     id: "compliance",
     name: "Compliance Checklist",
     description: "Regulatory compliance status and requirements",
-    icon: "✅",
+    icon: CheckCircle,
     category: "Compliance",
   },
 ];
@@ -66,7 +66,7 @@ const officialDocumentTemplates = [
     id: "vat-return-form",
     name: "VAT Return Form",
     description: "Official VAT return document as per IRD format",
-    icon: "📋",
+    icon: File,
     category: "Tax",
     recipient: "IRD",
   },
@@ -74,7 +74,7 @@ const officialDocumentTemplates = [
     id: "tds-statement",
     name: "TDS Deposit Statement",
     description: "Tax Deducted at Source report for IRD submission",
-    icon: "🧾",
+    icon: FileText,
     category: "Tax",
     recipient: "IRD",
   },
@@ -82,7 +82,7 @@ const officialDocumentTemplates = [
     id: "annual-tax-return",
     name: "Annual Tax Return",
     description: "Income tax computation statement for annual filing",
-    icon: "📑",
+    icon: FileText,
     category: "Tax",
     recipient: "IRD",
   },
@@ -90,7 +90,7 @@ const officialDocumentTemplates = [
     id: "profit-loss",
     name: "Profit & Loss Statement",
     description: "Official P&L statement for stakeholders and auditors",
-    icon: "📈",
+    icon: TrendingUp,
     category: "Financial",
     recipient: "Banks/Partners",
   },
@@ -98,7 +98,7 @@ const officialDocumentTemplates = [
     id: "balance-sheet",
     name: "Balance Sheet",
     description: "Statement of assets, liabilities and equity",
-    icon: "⚖️",
+    icon: Scale,
     category: "Financial",
     recipient: "Banks/Auditors",
   },
@@ -106,7 +106,7 @@ const officialDocumentTemplates = [
     id: "bank-loan-app",
     name: "Bank Loan Application",
     description: "Financial summary package for loan applications",
-    icon: "🏦",
+    icon: LandmarkIcon,
     category: "Banking",
     recipient: "Banks",
   },
@@ -114,7 +114,7 @@ const officialDocumentTemplates = [
     id: "ssf-report",
     name: "SSF Contribution Report",
     description: "Social Security Fund contribution statement",
-    icon: "👥",
+    icon: Users,
     category: "Compliance",
     recipient: "SSF",
   },
@@ -122,7 +122,7 @@ const officialDocumentTemplates = [
     id: "audit-package",
     name: "Audit-Ready Package",
     description: "Comprehensive documentation for external audit",
-    icon: "📁",
+    icon: Folder,
     category: "Audit",
     recipient: "Auditors",
   },
@@ -288,13 +288,13 @@ const Reports = () => {
 
   return (
     <div className="min-h-screen">
-      <DashboardHeader 
-        title="Reports & Documents" 
+      <DashboardHeader
+        title="Reports & Documents"
         subtitle="Generate analytics reports and official financial documents for government, banks, and partners"
         showAddButton
         addButtonText="New Document"
       />
-      
+
       <div className="p-6 space-y-8">
         {/* Data Status Banner */}
         {!isLoading && !hasData && (
@@ -330,7 +330,7 @@ const Reports = () => {
               <div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">Official Document Generator</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Generate official financial documents required for government submissions, bank applications, and partner reporting. 
+                  Generate official financial documents required for government submissions, bank applications, and partner reporting.
                   All documents follow Nepal's regulatory formats.
                 </p>
               </div>
@@ -338,14 +338,14 @@ const Reports = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {officialDocumentTemplates.map((template) => {
                   const isGenerating = generatingReport === template.id;
-                  
+
                   return (
                     <div
                       key={template.id}
                       className="group bg-card rounded-xl border border-border p-5 hover:shadow-card hover:border-accent/30 transition-all"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="text-3xl">{template.icon}</div>
+                        <div className="text-3xl"><template.icon className="w-8 h-8" /></div>
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                             {template.category}
@@ -361,9 +361,9 @@ const Reports = () => {
                       <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                         {template.description}
                       </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="w-full group-hover:border-accent group-hover:text-accent"
                         onClick={() => handleOfficialDocClick(template.id)}
                         disabled={isGenerating || isLoading}
@@ -400,14 +400,14 @@ const Reports = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {analyticsTemplates.map((template) => {
                   const isGenerating = generatingReport === template.id;
-                  
+
                   return (
                     <div
                       key={template.id}
                       className="group bg-card rounded-xl border border-border p-5 hover:shadow-card hover:border-accent/30 transition-all"
                     >
                       <div className="flex items-start justify-between mb-4">
-                        <div className="text-3xl">{template.icon}</div>
+                        <div className="text-3xl"><template.icon className="w-8 h-8" /></div>
                         <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                           {template.category}
                         </span>
@@ -418,9 +418,9 @@ const Reports = () => {
                       <p className="text-sm text-muted-foreground mb-4">
                         {template.description}
                       </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="w-full group-hover:border-accent group-hover:text-accent"
                         onClick={() => handleGenerateAnalyticsReport(template.id)}
                         disabled={isGenerating || isLoading}
@@ -502,7 +502,7 @@ const Reports = () => {
             <div>
               <h3 className="text-xl font-bold mb-2">Nepal-Compliant Official Documents</h3>
               <p className="text-primary-foreground/70 mb-4">
-                All official documents are designed specifically for Nepal's regulatory requirements. 
+                All official documents are designed specifically for Nepal's regulatory requirements.
                 They follow IRD formats, NRB guidelines, and are accepted by major banks, the SSF, and government bodies.
                 Save hours of manual documentation work.
               </p>
