@@ -13,9 +13,13 @@ serve(async (req) => {
   }
 
   try {
-    const { documentId, fileUrl, documentType } = await req.json();
+    const { documentId, fileUrl, documentType, returnOnly } = await req.json();
 
-    console.log("Processing document:", { documentId, documentType });
+    console.log("Processing document:", {
+      documentId,
+      documentType,
+      returnOnly,
+    });
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -26,14 +30,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Update document status to processing
-    await supabase
-      .from("documents")
-      .update({ status: "processing" })
-      .eq("id", documentId);
+    // Only update document status if not in returnOnly mode
+    if (!returnOnly && documentId && !documentId.startsWith("temp-")) {
+      await supabase
+        .from("documents")
+        .update({ status: "processing" })
+        .eq("id", documentId);
+    }
 
-    // Build OCR prompt based on document type
-    let systemPrompt = `You are a financial document OCR specialist for Nepal. Extract structured data from the document image.
+    const systemPrompt = `You are a financial document OCR specialist for Nepal. Extract structured data from the document image.
     
 IMPORTANT: First analyze the document to determine its type. Look for keywords like:
 - "Profit and Loss", "Income Statement", "P&L" → profit_loss
@@ -182,10 +187,12 @@ CRITICAL: Detect the document type correctly based on content, not just filename
 
     if (!response.ok) {
       if (response.status === 429) {
-        await supabase
-          .from("documents")
-          .update({ status: "error" })
-          .eq("id", documentId);
+        if (!returnOnly && documentId && !documentId.startsWith("temp-")) {
+          await supabase
+            .from("documents")
+            .update({ status: "error" })
+            .eq("id", documentId);
+        }
         return new Response(
           JSON.stringify({
             error: "Rate limit exceeded. Please try again later.",
@@ -197,10 +204,12 @@ CRITICAL: Detect the document type correctly based on content, not just filename
         );
       }
       if (response.status === 402) {
-        await supabase
-          .from("documents")
-          .update({ status: "error" })
-          .eq("id", documentId);
+        if (!returnOnly && documentId && !documentId.startsWith("temp-")) {
+          await supabase
+            .from("documents")
+            .update({ status: "error" })
+            .eq("id", documentId);
+        }
         return new Response(
           JSON.stringify({
             error: "AI credits exhausted. Please add credits to continue.",
@@ -221,8 +230,8 @@ CRITICAL: Detect the document type correctly based on content, not just filename
 
     console.log("AI response:", content);
 
-    // Parse the extracted data
     let extractedData = null;
+    let detectedType = documentType;
     try {
       // Clean the response - remove markdown code blocks if present
       let cleanContent = content.trim();
@@ -235,9 +244,25 @@ CRITICAL: Detect the document type correctly based on content, not just filename
         cleanContent = cleanContent.slice(0, -3);
       }
       extractedData = JSON.parse(cleanContent.trim());
+      // Get detected type from AI response
+      if (extractedData.type) {
+        detectedType = extractedData.type;
+      }
     } catch (parseError) {
       console.error("Failed to parse AI response:", parseError);
       extractedData = { raw_text: content, parse_error: true };
+    }
+
+    if (returnOnly) {
+      console.log("Returning extracted data for review (returnOnly mode)");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          extractedData,
+          documentType: detectedType,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Update document with extracted data
@@ -246,6 +271,7 @@ CRITICAL: Detect the document type correctly based on content, not just filename
       .update({
         status: "processed",
         extracted_data: extractedData,
+        document_type: detectedType,
       })
       .eq("id", documentId);
 

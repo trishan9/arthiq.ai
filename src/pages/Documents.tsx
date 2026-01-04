@@ -1,5 +1,26 @@
 import { useState } from "react";
-import { FileText, Image, FileSpreadsheet, Grid, List, Search, MoreVertical, CheckCircle, Clock, AlertCircle, Trash2, Eye, Loader2, FileImage, Plus, PenLine, BarChart3, Scale } from "lucide-react";
+import {
+  FileText,
+  Image,
+  FileSpreadsheet,
+  Grid,
+  List,
+  Search,
+  MoreVertical,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Trash2,
+  Eye,
+  Loader2,
+  FileImage,
+  Plus,
+  PenLine,
+  BarChart3,
+  Scale,
+  Database,
+  Edit,
+} from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,48 +28,98 @@ import { cn } from "@/lib/utils";
 import { useDocuments, Document } from "@/hooks/useDocuments";
 import { DocumentUploadZone } from "@/components/documents/DocumentUploadZone";
 import { ExtractedDataView } from "@/components/documents/ExtractedDataView";
+import { ExtractedDataEditor } from "@/components/documents/ExtractedDataEditor";
 import { DocumentPreview } from "@/components/documents/DocumentPreview";
 import { ManualEntryDialog } from "@/components/documents/ManualEntryDialog";
+import type { Json } from "@/integrations/supabase/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const categories = ["All", "Bank Statements", "Invoices", "Expenses", "Tax Documents", "P&L Statements", "Balance Sheets", "Payroll"];
+const categories = [
+  "All",
+  "Bank Statements",
+  "Invoices",
+  "Expenses",
+  "Tax Documents",
+  "P&L Statements",
+  "Balance Sheets",
+  "Payroll",
+];
 
 const categoryMap: Record<string, string> = {
   "Bank Statements": "bank_statement",
-  "Invoices": "invoice",
-  "Expenses": "receipt",
+  Invoices: "invoice",
+  Expenses: "receipt",
   "Tax Documents": "tax_document",
   "P&L Statements": "profit_loss",
   "Balance Sheets": "balance_sheet",
-  "Payroll": "payroll",
+  Payroll: "payroll",
 };
 
 const getFileIcon = (type: string, docType?: string) => {
-  if (docType === "profit_loss") return <BarChart3 className="w-6 h-6 text-success" />;
-  if (docType === "balance_sheet") return <Scale className="w-6 h-6 text-info" />;
-  if (type === "manual_entry") return <PenLine className="w-6 h-6 text-accent" />;
-  if (type.includes("pdf")) return <FileText className="w-6 h-6 text-destructive" />;
+  if (docType === "profit_loss")
+    return <BarChart3 className="w-6 h-6 text-success" />;
+  if (docType === "balance_sheet")
+    return <Scale className="w-6 h-6 text-info" />;
+  if (type === "manual_entry")
+    return <PenLine className="w-6 h-6 text-accent" />;
+  if (type.includes("pdf"))
+    return <FileText className="w-6 h-6 text-destructive" />;
   if (type.includes("image")) return <Image className="w-6 h-6 text-info" />;
-  if (type.includes("spreadsheet") || type.includes("csv") || type.includes("excel")) return <FileSpreadsheet className="w-6 h-6 text-success" />;
+  if (
+    type.includes("spreadsheet") ||
+    type.includes("csv") ||
+    type.includes("excel")
+  )
+    return <FileSpreadsheet className="w-6 h-6 text-success" />;
   return <FileText className="w-6 h-6 text-muted-foreground" />;
 };
 
 const getStatusBadge = (status: string) => {
   switch (status) {
     case "processed":
-      return <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success/10 px-2 py-1 rounded-full"><CheckCircle className="w-3 h-3" />Processed</span>;
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success/10 px-2 py-1 rounded-full">
+          <CheckCircle className="w-3 h-3" />
+          Processed
+        </span>
+      );
     case "processing":
-      return <span className="inline-flex items-center gap-1 text-xs font-medium text-warning bg-warning/10 px-2 py-1 rounded-full"><Clock className="w-3 h-3" />Processing</span>;
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-warning bg-warning/10 px-2 py-1 rounded-full">
+          <Clock className="w-3 h-3" />
+          Processing
+        </span>
+      );
     case "pending":
-      return <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full"><Clock className="w-3 h-3" />Pending</span>;
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
+          <Clock className="w-3 h-3" />
+          Pending
+        </span>
+      );
     case "error":
-      return <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-destructive/10 px-2 py-1 rounded-full"><AlertCircle className="w-3 h-3" />Error</span>;
-    default: 
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-destructive/10 px-2 py-1 rounded-full">
+          <AlertCircle className="w-3 h-3" />
+          Error
+        </span>
+      );
+    default:
       return null;
   }
 };
@@ -68,22 +139,57 @@ const formatDate = (dateString: string): string => {
 };
 
 const Documents = () => {
-  const { documents, isLoading, isUploading, uploadDocument, deleteDocument, refetch } = useDocuments();
+  const {
+    documents,
+    isLoading,
+    isUploading,
+    isSeeding,
+    pendingDocument,
+    uploadDocument,
+    confirmDocument,
+    cancelPendingDocument,
+    updateExtractedData,
+    deleteDocument,
+    refetch,
+  } = useDocuments();
+
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null
+  );
   const [previewDocument, setPreviewDocument] = useState<Document | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const filteredDocs = documents.filter((doc) => {
-    const matchesCategory = selectedCategory === "All" || doc.document_type === categoryMap[selectedCategory];
-    const matchesSearch = doc.file_name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "All" ||
+      doc.document_type === categoryMap[selectedCategory];
+    const matchesSearch = doc.file_name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const handleUpload = async (file: File) => {
     await uploadDocument(file);
+  };
+
+  const handleConfirmDocument = async (data: Json) => {
+    setIsSaving(true);
+    await confirmDocument(data);
+    setIsSaving(false);
+  };
+
+  const handleUpdateDocument = async (data: Json) => {
+    if (!editingDocument) return;
+    setIsSaving(true);
+    await updateExtractedData(editingDocument.id, data);
+    setIsSaving(false);
+    setEditingDocument(null);
   };
 
   const handleDelete = async (doc: Document) => {
@@ -94,20 +200,23 @@ const Documents = () => {
     setSelectedDocument(doc);
   };
 
+  const handleEditData = (doc: Document) => {
+    setEditingDocument(doc);
+  };
+
   const handlePreview = (doc: Document) => {
     setPreviewDocument(doc);
   };
 
   return (
     <div className="min-h-screen">
-      <DashboardHeader 
-        title="Documents" 
+      <DashboardHeader
+        title="Documents"
         subtitle="Manage and process your financial documents with AI-powered OCR"
         showAddButton={false}
       />
-      
+
       <div className="p-6 space-y-6">
-        {/* Action Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button onClick={() => setShowManualEntry(true)} className="gap-2">
@@ -116,16 +225,15 @@ const Documents = () => {
             </Button>
           </div>
           <div className="text-sm text-muted-foreground">
-            {documents.length} documents • {documents.filter(d => d.status === "processed").length} processed
+            {documents.length} documents •{" "}
+            {documents.filter((d) => d.status === "processed").length} processed
           </div>
         </div>
 
-        {/* Upload Area */}
         <DocumentUploadZone onUpload={handleUpload} isUploading={isUploading} />
 
         {/* Filters and View Toggle */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          {/* Category Filter */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto">
             {categories.map((cat) => (
               <button
@@ -143,13 +251,12 @@ const Documents = () => {
             ))}
           </div>
 
-          {/* View Toggle */}
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search documents..." 
-                className="pl-10 w-64" 
+              <Input
+                placeholder="Search documents..."
+                className="pl-10 w-64"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -159,7 +266,9 @@ const Documents = () => {
                 onClick={() => setViewMode("grid")}
                 className={cn(
                   "p-2 rounded-md transition-colors",
-                  viewMode === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  viewMode === "grid"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <Grid className="w-4 h-4" />
@@ -168,7 +277,9 @@ const Documents = () => {
                 onClick={() => setViewMode("list")}
                 className={cn(
                   "p-2 rounded-md transition-colors",
-                  viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  viewMode === "list"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <List className="w-4 h-4" />
@@ -177,39 +288,47 @@ const Documents = () => {
           </div>
         </div>
 
-        {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 text-accent animate-spin" />
           </div>
         )}
 
-        {/* Empty State */}
         {!isLoading && filteredDocs.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No documents found</h3>
-            <p className="text-sm text-muted-foreground">
-              {searchQuery || selectedCategory !== "All" 
-                ? "Try adjusting your search or filter" 
-                : "Upload your first document to get started"}
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              No documents found
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {searchQuery || selectedCategory !== "All"
+                ? "Try adjusting your search or filter"
+                : "Upload your first document or load sample data to get started"}
             </p>
           </div>
         )}
 
         {/* Documents Grid/List */}
-        {!isLoading && filteredDocs.length > 0 && (
-          viewMode === "grid" ? (
+        {!isLoading &&
+          filteredDocs.length > 0 &&
+          (viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredDocs.map((doc) => (
-                <div key={doc.id} className="bg-card rounded-xl border border-border p-4 hover:shadow-card transition-shadow group">
+                <div
+                  key={doc.id}
+                  className="bg-card rounded-xl border border-border p-4 hover:shadow-card transition-shadow group"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
                       {getFileIcon(doc.file_type, doc.document_type)}
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -219,21 +338,37 @@ const Documents = () => {
                           Preview Document
                         </DropdownMenuItem>
                         {doc.status === "processed" && doc.extracted_data && (
-                          <DropdownMenuItem onClick={() => handleViewData(doc)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Extracted Data
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => handleViewData(doc)}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Extracted Data
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEditData(doc)}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Data
+                            </DropdownMenuItem>
+                          </>
                         )}
-                        <DropdownMenuItem onClick={() => handleDelete(doc)} className="text-destructive">
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(doc)}
+                          className="text-destructive"
+                        >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <h4 className="font-medium text-foreground truncate mb-1">{doc.file_name}</h4>
+                  <h4 className="font-medium text-foreground truncate mb-1">
+                    {doc.file_name}
+                  </h4>
                   <p className="text-xs text-muted-foreground mb-3">
-                    {formatFileSize(doc.file_size)} • {formatDate(doc.created_at)}
+                    {formatFileSize(doc.file_size)} •{" "}
+                    {formatDate(doc.created_at)}
                   </p>
                   {getStatusBadge(doc.status)}
                 </div>
@@ -244,23 +379,38 @@ const Documents = () => {
               <table className="w-full">
                 <thead className="bg-muted/50 border-b border-border">
                   <tr>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Document</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden sm:table-cell">Type</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Size</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Document
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden sm:table-cell">
+                      Type
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">
+                      Size
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                      Date
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Status
+                    </th>
                     <th className="py-3 px-4"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredDocs.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={doc.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                             {getFileIcon(doc.file_type, doc.document_type)}
                           </div>
-                          <span className="font-medium text-foreground truncate max-w-[200px]">{doc.file_name}</span>
+                          <span className="font-medium text-foreground truncate max-w-[200px]">
+                            {doc.file_name}
+                          </span>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-muted-foreground hidden sm:table-cell capitalize">
@@ -272,7 +422,9 @@ const Documents = () => {
                       <td className="py-3 px-4 text-sm text-muted-foreground hidden lg:table-cell">
                         {formatDate(doc.created_at)}
                       </td>
-                      <td className="py-3 px-4">{getStatusBadge(doc.status)}</td>
+                      <td className="py-3 px-4">
+                        {getStatusBadge(doc.status)}
+                      </td>
                       <td className="py-3 px-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -281,17 +433,33 @@ const Documents = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handlePreview(doc)}>
+                            <DropdownMenuItem
+                              onClick={() => handlePreview(doc)}
+                            >
                               <FileImage className="w-4 h-4 mr-2" />
                               Preview Document
                             </DropdownMenuItem>
-                            {doc.status === "processed" && doc.extracted_data && (
-                              <DropdownMenuItem onClick={() => handleViewData(doc)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Extracted Data
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => handleDelete(doc)} className="text-destructive">
+                            {doc.status === "processed" &&
+                              doc.extracted_data && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => handleViewData(doc)}
+                                  >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    View Extracted Data
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleEditData(doc)}
+                                  >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit Data
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(doc)}
+                              className="text-destructive"
+                            >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -303,11 +471,9 @@ const Documents = () => {
                 </tbody>
               </table>
             </div>
-          )
-        )}
+          ))}
       </div>
 
-      {/* Extracted Data Modal */}
       {selectedDocument && (
         <ExtractedDataView
           isOpen={!!selectedDocument}
@@ -317,7 +483,6 @@ const Documents = () => {
         />
       )}
 
-      {/* Document Preview Modal */}
       {previewDocument && (
         <DocumentPreview
           isOpen={!!previewDocument}
@@ -328,12 +493,38 @@ const Documents = () => {
         />
       )}
 
-      {/* Manual Entry Dialog */}
       <ManualEntryDialog
         isOpen={showManualEntry}
         onClose={() => setShowManualEntry(false)}
         onSuccess={refetch}
       />
+
+      {/* Pending Document Confirmation Dialog */}
+      {pendingDocument && (
+        <ExtractedDataEditor
+          isOpen={!!pendingDocument}
+          onClose={cancelPendingDocument}
+          data={pendingDocument.extractedData}
+          documentType={pendingDocument.documentType}
+          onSave={handleConfirmDocument}
+          isSaving={isSaving}
+          mode="confirm"
+          title={`Review: ${pendingDocument.file.name}`}
+        />
+      )}
+
+      {editingDocument && (
+        <ExtractedDataEditor
+          isOpen={!!editingDocument}
+          onClose={() => setEditingDocument(null)}
+          data={editingDocument.extracted_data}
+          documentType={editingDocument.document_type}
+          onSave={handleUpdateDocument}
+          isSaving={isSaving}
+          mode="edit"
+          title={`Edit: ${editingDocument.file_name}`}
+        />
+      )}
     </div>
   );
 };
