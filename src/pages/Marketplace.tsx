@@ -7,7 +7,7 @@ import {
   List,
   FileText,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import {
   EligibilityCriteria,
   SMEProfile,
   MarketplaceRequest,
-} from "@/hooks/useMarketplace";
+} from "@/hooks/use-market-place";
 import { useCredibilityScore } from "@/hooks/use-credibility-score";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { LenderCard } from "@/components/marketplace/LenderCard";
