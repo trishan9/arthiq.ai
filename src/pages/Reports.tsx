@@ -1,5 +1,22 @@
 import { useState } from "react";
-import { FileText, Download, Calendar, Clock, LandmarkIcon, CheckCircle, Plus, Loader2, Building2, FileCheck, Landmark, BarChart2, PieChart, File, TrendingUp, Scale, Users, Folder, FileChartColumnIncreasing } from "lucide-react";
+import {
+  FileText,
+  Calendar,
+  CheckCircle,
+  Plus,
+  Loader2,
+  Building2,
+  FileCheck,
+  Landmark,
+  TrendingUp,
+  FileChartColumnIncreasing,
+  PieChart,
+  LineChart,
+  Scale,
+  LandmarkIcon,
+  Users,
+  Folder,
+} from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,11 +24,9 @@ import { useFinancialData } from "@/hooks/useFinancialData";
 import { useRegulationInsights } from "@/hooks/useRegulationInsights";
 import {
   generateFinancialHealthReport,
-  generateVATReport,
-  generateLoanApplicationReport,
   generateTransactionReport,
   generateComplianceReport,
-  downloadPDF
+  downloadPDF,
 } from "@/lib/pdfReportGenerator";
 import {
   generateVATReturnForm,
@@ -22,9 +37,14 @@ import {
   generateBankLoanApplication,
   generateSSFReport,
   generateAuditPackage,
-  type OfficialDocumentConfig
+  type OfficialDocumentConfig,
 } from "@/lib/officialDocumentGenerator";
+import {
+  generateProjectionReport,
+  ProjectionConfig,
+} from "@/lib/projectionReportGenerator";
 import BusinessInfoDialog from "@/components/reports/BusinessInfoDialog";
+import { ProjectionConfigDialog } from "@/components/reports/ProjectionConfigDialog";
 import { toast } from "sonner";
 
 interface GeneratedReport {
@@ -57,6 +77,16 @@ const analyticsTemplates = [
     description: "Regulatory compliance status and requirements",
     icon: CheckCircle,
     category: "Compliance",
+  },
+
+  {
+    id: "projection-report",
+    name: "Financial Projection Report",
+    description:
+      "Revenue projections and loan-ready estimates for bank applications",
+
+    icon: LineChart,
+    category: "Loan-Ready",
   },
 ];
 
@@ -130,30 +160,48 @@ const officialDocumentTemplates = [
 
 const Reports = () => {
   const { metrics, isLoading, hasData } = useFinancialData();
-  const { insights, isLoading: insightsLoading, analyzeRegulations } = useRegulationInsights();
+  const {
+    insights,
+    isLoading: insightsLoading,
+    analyzeRegulations,
+  } = useRegulationInsights();
   const [generatingReport, setGeneratingReport] = useState<string | null>(null);
-  const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>([]);
+  const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>(
+    []
+  );
   const [showBusinessInfoDialog, setShowBusinessInfoDialog] = useState(false);
-  const [selectedOfficialDoc, setSelectedOfficialDoc] = useState<string | null>(null);
+  const [selectedOfficialDoc, setSelectedOfficialDoc] = useState<string | null>(
+    null
+  );
+  const [showProjectionDialog, setShowProjectionDialog] = useState(false);
 
   const handleGenerateAnalyticsReport = async (templateId: string) => {
     if (!hasData) {
       toast.error("No data available", {
-        description: "Please upload some documents first to generate reports."
+        description: "Please upload some documents first to generate reports.",
       });
       return;
     }
 
+    if (templateId === "projection-report") {
+      setShowProjectionDialog(true);
+
+      return;
+    }
+
     setGeneratingReport(templateId);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
+      const dateStr = now.toISOString().split("T")[0];
       const config = {
         title: "",
         businessName: "Your Business",
-        dateRange: `As of ${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+        dateRange: `As of ${now.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        })}`,
       };
 
       let doc;
@@ -173,7 +221,7 @@ const Reports = () => {
         case "compliance":
           if (!insights) {
             toast.info("Analyzing compliance...", {
-              description: "Please wait while we analyze your documents."
+              description: "Please wait while we analyze your documents.",
             });
             await analyzeRegulations();
             setGeneratingReport(null);
@@ -191,7 +239,9 @@ const Reports = () => {
 
       downloadPDF(doc, reportName);
       addToRecentReports(templateId, reportName, "Analytics");
-      toast.success("Report generated!", { description: "Your PDF has been downloaded." });
+      toast.success("Report generated!", {
+        description: "Your PDF has been downloaded.",
+      });
     } catch (error) {
       console.error("Error generating report:", error);
       toast.error("Failed to generate report");
@@ -203,7 +253,8 @@ const Reports = () => {
   const handleOfficialDocClick = (templateId: string) => {
     if (!hasData) {
       toast.error("No data available", {
-        description: "Please upload some documents first to generate official documents."
+        description:
+          "Please upload some documents first to generate official documents.",
       });
       return;
     }
@@ -211,18 +262,22 @@ const Reports = () => {
     setShowBusinessInfoDialog(true);
   };
 
-  const handleGenerateOfficialDocument = async (config: OfficialDocumentConfig) => {
+  const handleGenerateOfficialDocument = async (
+    config: OfficialDocumentConfig
+  ) => {
     if (!selectedOfficialDoc) return;
 
     setGeneratingReport(selectedOfficialDoc);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
+      const dateStr = now.toISOString().split("T")[0];
       let doc;
       let reportName;
-      const template = officialDocumentTemplates.find(t => t.id === selectedOfficialDoc);
+      const template = officialDocumentTemplates.find(
+        (t) => t.id === selectedOfficialDoc
+      );
 
       switch (selectedOfficialDoc) {
         case "vat-return-form":
@@ -264,8 +319,14 @@ const Reports = () => {
       }
 
       doc.save(`${reportName}.pdf`);
-      addToRecentReports(selectedOfficialDoc, reportName, template?.category || "Official");
-      toast.success("Official document generated!", { description: "Your PDF has been downloaded." });
+      addToRecentReports(
+        selectedOfficialDoc,
+        reportName,
+        template?.category || "Official"
+      );
+      toast.success("Official document generated!", {
+        description: "Your PDF has been downloaded.",
+      });
     } catch (error) {
       console.error("Error generating document:", error);
       toast.error("Failed to generate document");
@@ -275,15 +336,42 @@ const Reports = () => {
     }
   };
 
-  const addToRecentReports = (templateId: string, name: string, type: string) => {
+  const addToRecentReports = (
+    templateId: string,
+    name: string,
+    type: string
+  ) => {
     const newReport: GeneratedReport = {
       id: `${templateId}-${Date.now()}`,
       name,
       type,
-      createdAt: new Date().toISOString().split('T')[0],
-      status: "ready"
+      createdAt: new Date().toISOString().split("T")[0],
+      status: "ready",
     };
-    setGeneratedReports(prev => [newReport, ...prev]);
+    setGeneratedReports((prev) => [newReport, ...prev]);
+  };
+
+  const handleGenerateProjectionReport = async (config: ProjectionConfig) => {
+    setGeneratingReport("projection-report");
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    try {
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0];
+      const doc = generateProjectionReport(metrics, config);
+      const reportName = `Financial Projection - ${config.projectionMonths}mo ${config.growthScenario} - ${dateStr}`;
+      doc.save(`${reportName}.pdf`);
+      addToRecentReports("projection-report", reportName, "Loan-Ready");
+      toast.success("Projection report generated!", {
+        description: "Your loan-ready PDF has been downloaded.",
+      });
+    } catch (error) {
+      console.error("Error generating projection report:", error);
+      toast.error("Failed to generate projection report");
+    } finally {
+      setGeneratingReport(null);
+    }
   };
 
   return (
@@ -303,9 +391,12 @@ const Reports = () => {
               <FileText className="w-5 h-5 text-warning" />
             </div>
             <div>
-              <h4 className="font-medium text-foreground">No documents uploaded yet</h4>
+              <h4 className="font-medium text-foreground">
+                No documents uploaded yet
+              </h4>
               <p className="text-sm text-muted-foreground">
-                Upload bank statements, invoices, or receipts to generate accurate reports and official documents.
+                Upload bank statements, invoices, or receipts to generate
+                accurate reports and official documents.
               </p>
             </div>
           </div>
@@ -328,10 +419,13 @@ const Reports = () => {
           <TabsContent value="official" className="mt-6">
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Official Document Generator</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Official Document Generator
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Generate official financial documents required for government submissions, bank applications, and partner reporting.
-                  All documents follow Nepal's regulatory formats.
+                  Generate official financial documents required for government
+                  submissions, bank applications, and partner reporting. All
+                  documents follow Nepal's regulatory formats.
                 </p>
               </div>
 
@@ -345,7 +439,9 @@ const Reports = () => {
                       className="group bg-card rounded-xl border border-border p-5 hover:shadow-card hover:border-accent/30 transition-all"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="text-3xl"><template.icon className="w-8 h-8" /></div>
+                        <div className="text-3xl">
+                          <template.icon className="w-8 h-8" />
+                        </div>
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                             {template.category}
@@ -391,9 +487,12 @@ const Reports = () => {
           <TabsContent value="analytics" className="mt-6">
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Analytics Reports</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Analytics Reports
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Generate data analysis reports based on your uploaded financial documents.
+                  Generate data analysis reports based on your uploaded
+                  financial documents.
                 </p>
               </div>
 
@@ -407,7 +506,9 @@ const Reports = () => {
                       className="group bg-card rounded-xl border border-border p-5 hover:shadow-card hover:border-accent/30 transition-all"
                     >
                       <div className="flex items-start justify-between mb-4">
-                        <div className="text-3xl"><template.icon className="w-8 h-8" /></div>
+                        <div className="text-3xl">
+                          <template.icon className="w-8 h-8" />
+                        </div>
                         <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                           {template.category}
                         </span>
@@ -422,7 +523,9 @@ const Reports = () => {
                         variant="outline"
                         size="sm"
                         className="w-full group-hover:border-accent group-hover:text-accent"
-                        onClick={() => handleGenerateAnalyticsReport(template.id)}
+                        onClick={() =>
+                          handleGenerateAnalyticsReport(template.id)
+                        }
                         disabled={isGenerating || isLoading}
                       >
                         {isGenerating ? (
@@ -448,30 +551,47 @@ const Reports = () => {
         {/* Recently Generated Reports */}
         {generatedReports.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-4">Recently Generated</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Recently Generated
+            </h3>
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               <table className="w-full">
                 <thead className="bg-muted/50 border-b border-border">
                   <tr>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Document</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden sm:table-cell">Type</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">Created</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Document
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden sm:table-cell">
+                      Type
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">
+                      Created
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {generatedReports.slice(0, 10).map((report) => (
-                    <tr key={report.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={report.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                             <FileText className="w-5 h-5 text-primary" />
                           </div>
-                          <span className="font-medium text-foreground text-sm">{report.name}</span>
+                          <span className="font-medium text-foreground text-sm">
+                            {report.name}
+                          </span>
                         </div>
                       </td>
                       <td className="py-4 px-4 hidden sm:table-cell">
-                        <span className="text-sm text-muted-foreground">{report.type}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {report.type}
+                        </span>
                       </td>
                       <td className="py-4 px-4 hidden md:table-cell">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -500,18 +620,31 @@ const Reports = () => {
               <Landmark className="w-8 h-8 text-accent" />
             </div>
             <div>
-              <h3 className="text-xl font-bold mb-2">Nepal-Compliant Official Documents</h3>
+              <h3 className="text-xl font-bold mb-2">
+                Nepal-Compliant Official Documents
+              </h3>
               <p className="text-primary-foreground/70 mb-4">
-                All official documents are designed specifically for Nepal's regulatory requirements.
-                They follow IRD formats, NRB guidelines, and are accepted by major banks, the SSF, and government bodies.
-                Save hours of manual documentation work.
+                All official documents are designed specifically for Nepal's
+                regulatory requirements. They follow IRD formats, NRB
+                guidelines, and are accepted by major banks, the SSF, and
+                government bodies. Save hours of manual documentation work.
               </p>
               <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">IRD Format</span>
-                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">NRB Compliant</span>
-                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">Bank Ready</span>
-                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">SSF Compatible</span>
-                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">Audit Ready</span>
+                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">
+                  IRD Format
+                </span>
+                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">
+                  NRB Compliant
+                </span>
+                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">
+                  Bank Ready
+                </span>
+                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">
+                  SSF Compatible
+                </span>
+                <span className="px-3 py-1 rounded-full bg-primary-foreground/10 text-sm">
+                  Audit Ready
+                </span>
               </div>
             </div>
           </div>
@@ -523,7 +656,17 @@ const Reports = () => {
         open={showBusinessInfoDialog}
         onOpenChange={setShowBusinessInfoDialog}
         onSubmit={handleGenerateOfficialDocument}
-        documentType={officialDocumentTemplates.find(t => t.id === selectedOfficialDoc)?.name || "Document"}
+        documentType={
+          officialDocumentTemplates.find((t) => t.id === selectedOfficialDoc)
+            ?.name || "Document"
+        }
+      />
+
+      <ProjectionConfigDialog
+        open={showProjectionDialog}
+        onOpenChange={setShowProjectionDialog}
+        onGenerate={handleGenerateProjectionReport}
+        isGenerating={generatingReport === "projection-report"}
       />
     </div>
   );
