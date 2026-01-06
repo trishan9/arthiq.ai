@@ -242,6 +242,10 @@ export type Database = {
           sme_id: string;
           status: Database["public"]["Enums"]["request_status"] | null;
           updated_at: string | null;
+          verification_notes: string | null;
+          verification_requested_at: string | null;
+          verification_status: string | null;
+          verified_at: string | null;
         };
         Insert: {
           amount_requested?: number | null;
@@ -257,6 +261,10 @@ export type Database = {
           sme_id: string;
           status?: Database["public"]["Enums"]["request_status"] | null;
           updated_at?: string | null;
+          verification_notes?: string | null;
+          verification_requested_at?: string | null;
+          verification_status?: string | null;
+          verified_at?: string | null;
         };
         Update: {
           amount_requested?: number | null;
@@ -272,6 +280,10 @@ export type Database = {
           sme_id?: string;
           status?: Database["public"]["Enums"]["request_status"] | null;
           updated_at?: string | null;
+          verification_notes?: string | null;
+          verification_requested_at?: string | null;
+          verification_status?: string | null;
+          verified_at?: string | null;
         };
         Relationships: [
           {
@@ -373,6 +385,7 @@ export type Database = {
           expires_at: string;
           id: string;
           included_data: Json;
+          marketplace_request_id: string | null;
           proof_hash: string;
           proof_name: string;
           shared_with: string | null;
@@ -381,7 +394,11 @@ export type Database = {
           tx_hash: string | null;
           updated_at: string;
           user_id: string | null;
+          verification_type: string;
           verification_url: string | null;
+          verified_by_lender_id: string | null;
+          verifier_name: string | null;
+          verifier_notes: string | null;
         };
         Insert: {
           blockchain_network?: string | null;
@@ -389,6 +406,7 @@ export type Database = {
           expires_at: string;
           id?: string;
           included_data: Json;
+          marketplace_request_id?: string | null;
           proof_hash: string;
           proof_name: string;
           shared_with?: string | null;
@@ -397,7 +415,11 @@ export type Database = {
           tx_hash?: string | null;
           updated_at?: string;
           user_id?: string | null;
+          verification_type?: string;
           verification_url?: string | null;
+          verified_by_lender_id?: string | null;
+          verifier_name?: string | null;
+          verifier_notes?: string | null;
         };
         Update: {
           blockchain_network?: string | null;
@@ -405,6 +427,7 @@ export type Database = {
           expires_at?: string;
           id?: string;
           included_data?: Json;
+          marketplace_request_id?: string | null;
           proof_hash?: string;
           proof_name?: string;
           shared_with?: string | null;
@@ -413,9 +436,28 @@ export type Database = {
           tx_hash?: string | null;
           updated_at?: string;
           user_id?: string | null;
+          verification_type?: string;
           verification_url?: string | null;
+          verified_by_lender_id?: string | null;
+          verifier_name?: string | null;
+          verifier_notes?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "verification_proofs_marketplace_request_id_fkey";
+            columns: ["marketplace_request_id"];
+            isOneToOne: false;
+            referencedRelation: "marketplace_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "verification_proofs_verified_by_lender_id_fkey";
+            columns: ["verified_by_lender_id"];
+            isOneToOne: false;
+            referencedRelation: "lenders";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
     Views: {

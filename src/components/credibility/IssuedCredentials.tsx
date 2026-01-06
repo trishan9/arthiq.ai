@@ -9,6 +9,8 @@ import {
   Building2,
   FileText,
   QrCode,
+  Link2,
+  BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { VerificationProof } from "@/hooks/useVerificationProofs";
 import { cn } from "@/lib/utils";
@@ -39,7 +42,13 @@ export function IssuedCredentials({
   const [selectedCredential, setSelectedCredential] =
     useState<VerificationProof | null>(null);
 
-  const activeCredentials = credentials.filter((c) => c.status === "active");
+  // Separate lender-verified from self-attested
+  const lenderVerified = credentials.filter(
+    (c) => c.verification_type === "lender-verified" && c.status === "active"
+  );
+  const selfAttested = credentials.filter(
+    (c) => c.verification_type === "self-attested" && c.status === "active"
+  );
   const expiredCredentials = credentials.filter((c) => c.status !== "active");
 
   const getVerificationUrl = (credential: VerificationProof) => {
@@ -70,15 +79,50 @@ export function IssuedCredentials({
 
   return (
     <div className="space-y-6">
-      {/* Active Credentials */}
-      {activeCredentials.length > 0 && (
+      {/* Lender-Verified Credentials (On Blockchain) */}
+      {lenderVerified.length > 0 && (
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-success" />
-            Active Credentials ({activeCredentials.length})
+            <Link2 className="w-4 h-4 text-emerald-500" />
+            Lender-Verified (On Blockchain)
+            <Badge
+              variant="outline"
+              className="text-emerald-600 border-emerald-200 bg-emerald-50"
+            >
+              High Trust
+            </Badge>
           </h4>
           <div className="grid gap-4">
-            {activeCredentials.map((credential) => (
+            {lenderVerified.map((credential) => (
+              <CredentialCard
+                key={credential.id}
+                credential={credential}
+                onCopyLink={() => onCopyLink(getVerificationUrl(credential))}
+                onViewBlockchain={onViewBlockchain}
+                onRevoke={onRevoke}
+                onShowQR={() => handleShowQR(credential)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Self-Attested Credentials (Not on Blockchain) */}
+      {selfAttested.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-blue-500" />
+            Self-Attested Credentials
+            <Badge variant="outline" className="text-muted-foreground">
+              Lower Trust
+            </Badge>
+          </h4>
+          <p className="text-xs text-muted-foreground mb-3">
+            These credentials are not yet on blockchain. Apply to lenders to get
+            verified.
+          </p>
+          <div className="grid gap-4">
+            {selfAttested.map((credential) => (
               <CredentialCard
                 key={credential.id}
                 credential={credential}
@@ -195,36 +239,61 @@ function CredentialCard({
   const isExpiringSoon =
     isActive && daysUntilExpiry <= 7 && daysUntilExpiry > 0;
 
+  const isLenderVerified = credential.verification_type === "lender-verified";
+
   return (
     <div
       className={cn(
         "bg-card rounded-xl border p-5 transition-all",
-        isActive ? "border-border hover:border-accent/50" : "border-border/50"
+        isActive ? "border-border hover:border-accent/50" : "border-border/50",
+        isLenderVerified && isActive && "border-emerald-200 bg-emerald-50/30"
       )}
     >
       <div className="flex items-start gap-4">
         <div
           className={cn(
             "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
-            isActive ? "bg-accent/10" : "bg-muted"
+            isLenderVerified
+              ? "bg-emerald-100"
+              : isActive
+              ? "bg-accent/10"
+              : "bg-muted"
           )}
         >
-          <Shield
-            className={cn(
-              "w-6 h-6",
-              isActive ? "text-accent" : "text-muted-foreground"
-            )}
-          />
+          {isLenderVerified ? (
+            <BadgeCheck className="w-6 h-6 text-emerald-600" />
+          ) : (
+            <Shield
+              className={cn(
+                "w-6 h-6",
+                isActive ? "text-accent" : "text-muted-foreground"
+              )}
+            />
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h4 className="font-semibold text-foreground">
-                {credential.proof_name}
-              </h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold text-foreground">
+                  {credential.proof_name}
+                </h4>
+                {isLenderVerified && (
+                  <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                    <Link2 className="w-3 h-3 mr-1" />
+                    On-Chain
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                {credential.shared_with && (
+                {credential.verifier_name && (
+                  <span className="flex items-center gap-1">
+                    <Building2 className="w-3 h-3" />
+                    Verified by {credential.verifier_name}
+                  </span>
+                )}
+                {credential.shared_with && !credential.verifier_name && (
                   <span className="flex items-center gap-1">
                     <Building2 className="w-3 h-3" />
                     {credential.shared_with}

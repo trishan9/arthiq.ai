@@ -414,9 +414,6 @@ const Dashboard = () => {
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Target className="w-5 h-5 text-accent" />
             Stability & Growth Signals
-            <span className="text-sm font-normal text-muted-foreground ml-2">
-              — These metrics build your credibility
-            </span>
           </h3>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">

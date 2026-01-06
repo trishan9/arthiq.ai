@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Loader2, ArrowRight, Lock, Building2, Send } from "lucide-react";
+import {
+  Loader2,
+  ArrowRight,
+  Lock,
+  Building2,
+  Send,
+  FileCheck,
+  ExternalLink,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +21,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { useCredibilityScore } from "@/hooks/use-credibility-score";
 import { useVerificationProofs } from "@/hooks/useVerificationProofs";
@@ -35,6 +45,7 @@ import {
 import { CredentialPreview } from "@/components/credibility/CredentialPreview";
 
 const Credibility = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [selectedClaims, setSelectedClaims] = useState<string[]>([]);
@@ -280,6 +291,17 @@ const Credibility = () => {
 
           {/* Issue Credentials Tab */}
           <TabsContent value="credentials" className="space-y-6 mt-6">
+            {/* Info Banner about Verification Flow */}
+            <Alert className="bg-blue-50 border-blue-200">
+              <FileCheck className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                <strong>How verification works:</strong> Create a self-attested
+                credential here, then apply to lenders in the Marketplace. When
+                a lender verifies your data, it gets stored on blockchain and
+                your Trust Tier is upgraded.
+              </AlertDescription>
+            </Alert>
+
             {!hasData ? (
               <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -292,9 +314,7 @@ const Credibility = () => {
                 </p>
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    (window.location.href = "/dashboard/documents")
-                  }
+                  onClick={() => navigate("/dashboard/documents")}
                 >
                   Go to Documents
                 </Button>
@@ -349,17 +369,45 @@ const Credibility = () => {
                         credibilityScore={credibilityScore.totalScore}
                         sharedWith={sharedWith}
                       />
-                      <Button
-                        variant="accent"
-                        size="lg"
-                        className="w-full"
-                        onClick={() => setIsDialogOpen(true)}
-                      >
-                        <Lock className="w-4 h-4 mr-2" />
-                        Issue Credential with {selectedClaims.length} Claims
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
+                      <div className="space-y-3">
+                        <Button
+                          variant="accent"
+                          size="lg"
+                          className="w-full"
+                          onClick={() => setIsDialogOpen(true)}
+                        >
+                          <FileCheck className="w-4 h-4 mr-2" />
+                          Create Self-Attested Credential
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground">
+                          This creates a local credential. To get blockchain
+                          verification, apply to a lender.
+                        </p>
+                      </div>
                     </>
+                  )}
+
+                  {/* Request Verification CTA */}
+                  {selectedClaims.length > 0 && (
+                    <div className="bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl border border-emerald-200 p-6">
+                      <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                        🔗 Want Blockchain Verification?
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Apply to a lender in the Marketplace. When they verify
+                        your credibility packet, your data is permanently stored
+                        on blockchain and your Trust Tier is upgraded.
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="w-full border-emerald-300 hover:bg-emerald-100"
+                        onClick={() => navigate("/dashboard/marketplace")}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Go to Lender Marketplace
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -381,10 +429,11 @@ const Credibility = () => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Issue Credibility Credential</DialogTitle>
+              <DialogTitle>Create Self-Attested Credential</DialogTitle>
               <DialogDescription>
-                Complete the details below. The recipient will see your verified
-                claims and credibility score, not your raw financial data.
+                This creates a local credential for your records. To get
+                blockchain-verified, apply to a lender who will verify your
+                data.
               </DialogDescription>
             </DialogHeader>
 
@@ -452,15 +501,18 @@ const Credibility = () => {
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Issuing...
+                    Creating...
                   </>
                 ) : (
                   <>
-                    <Lock className="w-4 h-4 mr-2" />
-                    Issue Credential
+                    <FileCheck className="w-4 h-4 mr-2" />
+                    Create Credential
                   </>
                 )}
               </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Not stored on blockchain. Apply to lenders for verification.
+              </p>
             </div>
           </DialogContent>
         </Dialog>

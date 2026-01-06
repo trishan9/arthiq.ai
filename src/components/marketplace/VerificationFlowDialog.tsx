@@ -8,6 +8,7 @@ import {
   User,
   Loader2,
   ExternalLink,
+  Link2,
 } from "lucide-react";
 import {
   Dialog,
@@ -24,9 +25,15 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { MarketplaceRequest, SMEProfile } from "@/hooks/use-market-place";
+import {
+  MarketplaceRequest,
+  SMEProfile,
+  Lender,
+} from "@/hooks/use-market-place";
 import { CredibilityScore } from "@/hooks/use-credibility-score";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface VerificationFlowDialogProps {
   open: boolean;
@@ -34,6 +41,7 @@ interface VerificationFlowDialogProps {
   request: MarketplaceRequest | null;
   smeProfile: SMEProfile | null;
   credibilityScore: CredibilityScore | null;
+  lender: Lender | null;
   onApprove: (response: string) => Promise<void>;
   onReject: (response: string) => Promise<void>;
   onViewPacket: () => void;
@@ -43,8 +51,8 @@ const getTierLabel = (tier: number) => {
   const labels = [
     "Self-Declared",
     "Document-Backed",
-    "Bank-Supported",
-    "Verified",
+    "Lender-Verified",
+    "Fully Verified",
   ];
   return labels[tier] || "Unknown";
 };
@@ -62,12 +70,19 @@ export function VerificationFlowDialog({
   request,
   smeProfile,
   credibilityScore,
+  lender,
   onApprove,
   onReject,
   onViewPacket,
 }: VerificationFlowDialogProps) {
   const [response, setResponse] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [blockchainProof, setBlockchainProof] = useState<{
+    txHash: string;
+    proofId: string;
+  } | null>(null);
+  const { toast } = useToast();
+
   const [verificationChecks, setVerificationChecks] = useState({
     reviewedFinancials: false,
     verifiedDocuments: false,
@@ -77,12 +92,63 @@ export function VerificationFlowDialog({
 
   const allChecksCompleted = Object.values(verificationChecks).every(Boolean);
 
+  // Lender approves → triggers blockchain verification
   const handleApprove = async () => {
-    if (!allChecksCompleted) return;
+    if (!allChecksCompleted || !request || !smeProfile || !lender) return;
     setIsSubmitting(true);
+
     try {
+      // Call blockchain-verify with lender-verify action
+      const { data, error } = await supabase.functions.invoke(
+        "blockchain-verify",
+        {
+          body: {
+            action: "lender-verify",
+            requestId: request.id,
+            lenderId: lender.id,
+            lenderName: lender.name,
+            smeId: smeProfile.id,
+            smeData: {
+              businessName: smeProfile.business_name,
+              businessType: smeProfile.business_type,
+            },
+            verifierNotes: response,
+            financialMetrics: {
+              credibilityScore: credibilityScore?.totalScore || 0,
+              trustTier: credibilityScore?.trustTier.tier || 0,
+              evidenceQuality: credibilityScore?.evidenceQuality.score || 0,
+              complianceScore: credibilityScore?.complianceReadiness.score || 0,
+              totalRevenue: 0, // Would come from actual financial data
+            },
+          },
+        }
+      );
+
+      if (error) throw error;
+
+      // Store blockchain proof details
+      setBlockchainProof({
+        txHash: data.txHash,
+        proofId: data.proof?.id,
+      });
+
+      toast({
+        title: "✓ Verification Stored on Blockchain",
+        description: `Transaction: ${data.txHash?.slice(
+          0,
+          10
+        )}...${data.txHash?.slice(-6)}`,
+      });
+
+      // Call the parent approve handler
       await onApprove(response);
-      onOpenChange(false);
+    } catch (error) {
+      console.error("Verification error:", error);
+      toast({
+        title: "Verification Failed",
+        description: "Could not store verification on blockchain",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -96,6 +162,10 @@ export function VerificationFlowDialog({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const viewOnBlockchain = (txHash: string) => {
+    window.open(`https://sepolia.etherscan.io/tx/${txHash}`, "_blank");
   };
 
   if (!request || !smeProfile) return null;
@@ -113,15 +183,39 @@ export function VerificationFlowDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            Verification Review
+            Lender Verification Flow
           </DialogTitle>
           <DialogDescription>
-            Review and verify the {request.request_type} request from{" "}
-            {smeProfile.business_name}
+            Review and verify {smeProfile.business_name}'s credibility packet.
+            Approval stores verification on blockchain.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Blockchain Verification Status */}
+          {blockchainProof && (
+            <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="h-4 w-4 text-emerald-500" />
+                <span className="font-medium text-emerald-700">
+                  Verified on Blockchain
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                This SME's credibility is now permanently recorded on Sepolia
+                blockchain.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => viewOnBlockchain(blockchainProof.txHash)}
+              >
+                View Transaction
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Button>
+            </div>
+          )}
+
           {/* SME Summary */}
           <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
             <div className="flex items-start justify-between">
@@ -156,7 +250,9 @@ export function VerificationFlowDialog({
             <div className="grid grid-cols-3 gap-3 mt-4">
               <div className="text-center p-2 rounded bg-background">
                 <p className="text-lg font-semibold">{smeProfile.trust_tier}</p>
-                <p className="text-xs text-muted-foreground">Trust Tier</p>
+                <p className="text-xs text-muted-foreground">
+                  {getTierLabel(smeProfile.trust_tier)}
+                </p>
               </div>
               <div className="text-center p-2 rounded bg-background">
                 <p className="text-lg font-semibold">
@@ -246,7 +342,7 @@ export function VerificationFlowDialog({
                     {highCount} high
                   </span>
                   {
-                    " priority issues detected. Review carefully before approval."
+                    " priority issues detected. Review carefully before verification."
                   }
                 </div>
               ) : (
@@ -269,7 +365,8 @@ export function VerificationFlowDialog({
           <div className="space-y-3">
             <h4 className="text-sm font-medium">Verification Checklist</h4>
             <p className="text-xs text-muted-foreground">
-              Complete all checks before approving the request
+              Complete all checks to verify. Approval stores proof on
+              blockchain.
             </p>
 
             <div className="space-y-2">
@@ -308,6 +405,7 @@ export function VerificationFlowDialog({
                         [check.id]: !!checked,
                       }))
                     }
+                    disabled={isSubmitting || !!blockchainProof}
                   />
                   <Label
                     htmlFor={check.id}
@@ -334,43 +432,71 @@ export function VerificationFlowDialog({
 
           {/* Response Message */}
           <div className="space-y-2">
-            <Label htmlFor="response">Response Message (Optional)</Label>
+            <Label htmlFor="response">Verification Notes (Optional)</Label>
             <Textarea
               id="response"
-              placeholder="Add a message for the SME..."
+              placeholder="Add notes about your verification decision..."
               value={response}
               onChange={(e) => setResponse(e.target.value)}
               rows={3}
+              disabled={isSubmitting || !!blockchainProof}
             />
           </div>
+
+          {/* Blockchain Info */}
+          {!blockchainProof && allChecksCompleted && (
+            <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Link2 className="h-4 w-4 text-blue-500" />
+                <span className="font-medium text-blue-700">
+                  Blockchain Verification
+                </span>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Clicking "Verify & Store" will create a permanent, tamper-proof
+                record of this verification on the Sepolia blockchain. The SME's
+                trust tier will be upgraded to Tier 2.
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="destructive"
-            onClick={handleReject}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <XCircle className="h-4 w-4 mr-2" />
-            )}
-            Reject
-          </Button>
-          <Button
-            onClick={handleApprove}
-            disabled={isSubmitting || !allChecksCompleted}
-          >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approve Request
-              </>
-            )}
-          </Button>
+          {!blockchainProof ? (
+            <>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <XCircle className="h-4 w-4 mr-2" />
+                )}
+                Reject
+              </Button>
+              <Button
+                onClick={handleApprove}
+                disabled={isSubmitting || !allChecksCompleted}
+                className="gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Storing on Blockchain...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Verify & Store on Blockchain
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => onOpenChange(false)}>Close</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

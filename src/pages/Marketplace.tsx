@@ -25,7 +25,7 @@ import {
   EligibilityCriteria,
   SMEProfile,
   MarketplaceRequest,
-} from "@/hooks/use-market-place";
+} from "@/hooks/useMarketplace";
 import { useCredibilityScore } from "@/hooks/use-credibility-score";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { LenderCard } from "@/components/marketplace/LenderCard";
@@ -40,7 +40,6 @@ import { useToast } from "@/hooks/use-toast";
 export default function Marketplace() {
   const {
     lenders,
-    leaderboard,
     requests,
     invitations,
     checkEligibility,
@@ -444,6 +443,7 @@ export default function Marketplace() {
         request={selectedRequest}
         smeProfile={currentSME}
         credibilityScore={credibilityScore}
+        lender={selectedLender}
         onApprove={handleApproveRequest}
         onReject={handleRejectRequest}
         onViewPacket={handleViewPacketFromVerification}

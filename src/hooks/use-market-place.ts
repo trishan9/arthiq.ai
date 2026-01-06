@@ -85,6 +85,33 @@ export interface MarketplaceInvitation {
 // Mock data for demo purposes since we don't have auth yet
 const mockLenders: Lender[] = [
   {
+    id: "0",
+    name: "Quick Start Finance",
+    organization_type: "microfinance",
+    description:
+      "Beginner-friendly lender with minimal requirements. Perfect for new businesses starting their credibility journey.",
+    logo_url: null,
+    website: "https://quickstart.np",
+    contact_email: "hello@quickstart.np",
+    is_verified: true,
+    criteria: [
+      {
+        id: "0a",
+        lender_id: "0",
+        name: "Starter Loan",
+        description:
+          "Easy approval for new businesses - no document requirements",
+        min_credibility_score: 40,
+        min_trust_tier: 0,
+        required_document_types: [],
+        min_monthly_revenue: 0,
+        min_business_age_months: 0,
+        max_anomaly_count: 10,
+        custom_requirements: {},
+      },
+    ],
+  },
+  {
     id: "1",
     name: "Nepal Bank Limited",
     organization_type: "bank",
