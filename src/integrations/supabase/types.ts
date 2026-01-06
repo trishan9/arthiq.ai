@@ -7,6 +7,8 @@ export type Json =
   | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1";
   };
@@ -51,6 +53,316 @@ export type Database = {
           status?: string;
           updated_at?: string;
           user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      eligibility_criteria: {
+        Row: {
+          created_at: string | null;
+          custom_requirements: Json | null;
+          description: string | null;
+          id: string;
+          is_active: boolean | null;
+          lender_id: string;
+          max_anomaly_count: number | null;
+          min_business_age_months: number | null;
+          min_credibility_score: number | null;
+          min_monthly_revenue: number | null;
+          min_trust_tier: number | null;
+          name: string;
+          required_document_types: string[] | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          custom_requirements?: Json | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          lender_id: string;
+          max_anomaly_count?: number | null;
+          min_business_age_months?: number | null;
+          min_credibility_score?: number | null;
+          min_monthly_revenue?: number | null;
+          min_trust_tier?: number | null;
+          name: string;
+          required_document_types?: string[] | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          custom_requirements?: Json | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          lender_id?: string;
+          max_anomaly_count?: number | null;
+          min_business_age_months?: number | null;
+          min_credibility_score?: number | null;
+          min_monthly_revenue?: number | null;
+          min_trust_tier?: number | null;
+          name?: string;
+          required_document_types?: string[] | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "eligibility_criteria_lender_id_fkey";
+            columns: ["lender_id"];
+            isOneToOne: false;
+            referencedRelation: "lenders";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      lenders: {
+        Row: {
+          contact_email: string | null;
+          created_at: string | null;
+          description: string | null;
+          id: string;
+          is_active: boolean | null;
+          is_verified: boolean | null;
+          logo_url: string | null;
+          name: string;
+          organization_type: Database["public"]["Enums"]["organization_type"];
+          updated_at: string | null;
+          user_id: string | null;
+          website: string | null;
+        };
+        Insert: {
+          contact_email?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          is_verified?: boolean | null;
+          logo_url?: string | null;
+          name: string;
+          organization_type?: Database["public"]["Enums"]["organization_type"];
+          updated_at?: string | null;
+          user_id?: string | null;
+          website?: string | null;
+        };
+        Update: {
+          contact_email?: string | null;
+          created_at?: string | null;
+          description?: string | null;
+          id?: string;
+          is_active?: boolean | null;
+          is_verified?: boolean | null;
+          logo_url?: string | null;
+          name?: string;
+          organization_type?: Database["public"]["Enums"]["organization_type"];
+          updated_at?: string | null;
+          user_id?: string | null;
+          website?: string | null;
+        };
+        Relationships: [];
+      };
+      marketplace_invitations: {
+        Row: {
+          created_at: string | null;
+          criteria_id: string | null;
+          expires_at: string | null;
+          id: string;
+          invitation_type: string;
+          lender_id: string;
+          message: string | null;
+          offer_details: Json | null;
+          sme_id: string;
+          sme_response: string | null;
+          status: Database["public"]["Enums"]["request_status"] | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          criteria_id?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          invitation_type: string;
+          lender_id: string;
+          message?: string | null;
+          offer_details?: Json | null;
+          sme_id: string;
+          sme_response?: string | null;
+          status?: Database["public"]["Enums"]["request_status"] | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          criteria_id?: string | null;
+          expires_at?: string | null;
+          id?: string;
+          invitation_type?: string;
+          lender_id?: string;
+          message?: string | null;
+          offer_details?: Json | null;
+          sme_id?: string;
+          sme_response?: string | null;
+          status?: Database["public"]["Enums"]["request_status"] | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_invitations_criteria_id_fkey";
+            columns: ["criteria_id"];
+            isOneToOne: false;
+            referencedRelation: "eligibility_criteria";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "marketplace_invitations_lender_id_fkey";
+            columns: ["lender_id"];
+            isOneToOne: false;
+            referencedRelation: "lenders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "marketplace_invitations_sme_id_fkey";
+            columns: ["sme_id"];
+            isOneToOne: false;
+            referencedRelation: "sme_profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      marketplace_requests: {
+        Row: {
+          amount_requested: number | null;
+          created_at: string | null;
+          credibility_snapshot: Json | null;
+          criteria_id: string | null;
+          id: string;
+          lender_id: string;
+          lender_response: string | null;
+          message: string | null;
+          purpose: string | null;
+          request_type: string;
+          sme_id: string;
+          status: Database["public"]["Enums"]["request_status"] | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          amount_requested?: number | null;
+          created_at?: string | null;
+          credibility_snapshot?: Json | null;
+          criteria_id?: string | null;
+          id?: string;
+          lender_id: string;
+          lender_response?: string | null;
+          message?: string | null;
+          purpose?: string | null;
+          request_type: string;
+          sme_id: string;
+          status?: Database["public"]["Enums"]["request_status"] | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          amount_requested?: number | null;
+          created_at?: string | null;
+          credibility_snapshot?: Json | null;
+          criteria_id?: string | null;
+          id?: string;
+          lender_id?: string;
+          lender_response?: string | null;
+          message?: string | null;
+          purpose?: string | null;
+          request_type?: string;
+          sme_id?: string;
+          status?: Database["public"]["Enums"]["request_status"] | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_requests_criteria_id_fkey";
+            columns: ["criteria_id"];
+            isOneToOne: false;
+            referencedRelation: "eligibility_criteria";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "marketplace_requests_lender_id_fkey";
+            columns: ["lender_id"];
+            isOneToOne: false;
+            referencedRelation: "lenders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "marketplace_requests_sme_id_fkey";
+            columns: ["sme_id"];
+            isOneToOne: false;
+            referencedRelation: "sme_profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      sme_profiles: {
+        Row: {
+          address: string | null;
+          anomaly_count: number | null;
+          business_name: string;
+          business_type: string | null;
+          compliance_score: number | null;
+          created_at: string | null;
+          credibility_score: number | null;
+          email: string | null;
+          established_date: string | null;
+          evidence_quality_score: number | null;
+          id: string;
+          is_public: boolean | null;
+          last_score_update: string | null;
+          phone: string | null;
+          registration_number: string | null;
+          stability_score: number | null;
+          total_documents: number | null;
+          trust_tier: number | null;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          address?: string | null;
+          anomaly_count?: number | null;
+          business_name: string;
+          business_type?: string | null;
+          compliance_score?: number | null;
+          created_at?: string | null;
+          credibility_score?: number | null;
+          email?: string | null;
+          established_date?: string | null;
+          evidence_quality_score?: number | null;
+          id?: string;
+          is_public?: boolean | null;
+          last_score_update?: string | null;
+          phone?: string | null;
+          registration_number?: string | null;
+          stability_score?: number | null;
+          total_documents?: number | null;
+          trust_tier?: number | null;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          address?: string | null;
+          anomaly_count?: number | null;
+          business_name?: string;
+          business_type?: string | null;
+          compliance_score?: number | null;
+          created_at?: string | null;
+          credibility_score?: number | null;
+          email?: string | null;
+          established_date?: string | null;
+          evidence_quality_score?: number | null;
+          id?: string;
+          is_public?: boolean | null;
+          last_score_update?: string | null;
+          phone?: string | null;
+          registration_number?: string | null;
+          stability_score?: number | null;
+          total_documents?: number | null;
+          trust_tier?: number | null;
+          updated_at?: string | null;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -113,7 +425,13 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      organization_type:
+        | "bank"
+        | "microfinance"
+        | "cooperative"
+        | "business"
+        | "investor";
+      request_status: "pending" | "accepted" | "rejected" | "expired";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -243,6 +561,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      organization_type: [
+        "bank",
+        "microfinance",
+        "cooperative",
+        "business",
+        "investor",
+      ],
+      request_status: ["pending", "accepted", "rejected", "expired"],
+    },
   },
 } as const;

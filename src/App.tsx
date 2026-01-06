@@ -13,6 +13,8 @@ import Credibility from "./pages/Credibility";
 import Insights from "./pages/Insights";
 import DashboardLayout from "./layouts/DashboardLayout";
 import NotFound from "./pages/NotFound";
+import Marketplace from "./pages/Marketplace";
+import Verify from "./pages/Verify";
 
 const queryClient = new QueryClient();
 
@@ -25,10 +27,15 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/verify" element={<Verify />} />
+          <Route path="/dashboard/marketplace" element={<Marketplace />} />
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/documents" element={<Documents />} />
-            <Route path="/dashboard/analytics" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/dashboard/analytics"
+              element={<Navigate to="/dashboard" replace />}
+            />
             <Route path="/dashboard/assistant" element={<Assistant />} />
             <Route path="/dashboard/reports" element={<Reports />} />
             <Route path="/dashboard/credibility" element={<Credibility />} />
