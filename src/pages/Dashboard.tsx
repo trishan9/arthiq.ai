@@ -7,6 +7,9 @@ import {
   Target,
   AlertTriangle,
   CheckCircle,
+  PiggyBank,
+  CreditCard,
+  Wallet,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -21,6 +24,7 @@ import { useCredibilityScore } from "@/hooks/use-credibility-score";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import MetricCard from "@/components/dashboard/MetricCard";
 
 const formatCurrency = (amount: number): string => {
   if (amount >= 100000) {
@@ -334,6 +338,58 @@ const Dashboard = () => {
           </div>
         )}
 
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <MetricCard
+            title="Total Revenue"
+            value={hasData ? formatCurrency(metrics.totalRevenue) : "₨ 0"}
+            change={{
+              value: hasData ? `+${metrics.revenueChange}%` : "No data",
+              trend: hasData ? "up" : "neutral",
+              label: "vs last month",
+            }}
+            icon={Wallet}
+            iconColor="text-success"
+            iconBgColor="bg-success/10"
+            variant={hasData ? "success" : "default"}
+          />
+          <MetricCard
+            title="Total Expenses"
+            value={hasData ? formatCurrency(metrics.totalExpenses) : "₨ 0"}
+            change={{
+              value: hasData ? `+${metrics.expenseChange}%` : "No data",
+              trend: hasData ? "up" : "neutral",
+              label: "vs last month",
+            }}
+            icon={CreditCard}
+            iconColor="text-destructive"
+            iconBgColor="bg-destructive/10"
+          />
+          <MetricCard
+            title="Net Profit"
+            value={hasData ? formatCurrency(netProfit) : "₨ 0"}
+            subtitle={hasData ? `${profitMargin}% margin` : undefined}
+            change={{
+              value: hasData ? "+5.2%" : "No data",
+              trend: netProfit > 0 ? "up" : "down",
+            }}
+            icon={PiggyBank}
+            iconColor="text-accent"
+            iconBgColor="bg-accent/10"
+            variant={netProfit > 0 ? "highlight" : "default"}
+          />
+          <MetricCard
+            title="Documents"
+            value={metrics.totalDocuments.toString()}
+            change={{
+              value: `${metrics.pendingDocuments} pending`,
+              trend: "neutral",
+            }}
+            icon={FileText}
+            iconColor="text-info"
+            iconBgColor="bg-info/10"
+          />
+        </div>
+
         {/* All Clear Banner */}
         {credibilityScore.anomalies.length === 0 &&
           credibilityScore.crossSourceReconciliation.passed &&
@@ -380,25 +436,6 @@ const Dashboard = () => {
             hasData={hasData}
           />
           <ExpenseBreakdown data={metrics.expenseCategories} />
-        </div>
-
-        {/* Transactions & Documents */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <RecentTransactionsTable
-              transactions={metrics.recentTransactions.map((tx) => ({
-                date: tx.date,
-                description: tx.description,
-                category: tx.category || "General",
-                amount: tx.credit || tx.debit || 0,
-                type: tx.credit ? ("credit" as const) : ("debit" as const),
-              }))}
-              hasData={hasData}
-            />
-          </div>
-          <div>
-            <RecentDocuments />
-          </div>
         </div>
       </div>
     </div>

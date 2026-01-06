@@ -1,7 +1,9 @@
 import { useState } from "react";
 import {
   FileText,
+  Download,
   Calendar,
+  Clock,
   CheckCircle,
   Plus,
   Loader2,
@@ -9,13 +11,6 @@ import {
   FileCheck,
   Landmark,
   TrendingUp,
-  FileChartColumnIncreasing,
-  PieChart,
-  LineChart,
-  Scale,
-  LandmarkIcon,
-  Users,
-  Folder,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
@@ -24,6 +19,8 @@ import { useFinancialData } from "@/hooks/useFinancialData";
 import { useRegulationInsights } from "@/hooks/useRegulationInsights";
 import {
   generateFinancialHealthReport,
+  generateVATReport,
+  generateLoanApplicationReport,
   generateTransactionReport,
   generateComplianceReport,
   downloadPDF,
@@ -61,22 +58,8 @@ const analyticsTemplates = [
     id: "financial-health",
     name: "Financial Health Report",
     description: "Overall business financial health analysis",
-    icon: FileChartColumnIncreasing,
+    icon: "💹",
     category: "Analysis",
-  },
-  {
-    id: "transaction-report",
-    name: "Transaction Report",
-    description: "Detailed list of all transactions from your documents",
-    icon: PieChart,
-    category: "Analysis",
-  },
-  {
-    id: "compliance",
-    name: "Compliance Checklist",
-    description: "Regulatory compliance status and requirements",
-    icon: CheckCircle,
-    category: "Compliance",
   },
 
   {
@@ -84,8 +67,7 @@ const analyticsTemplates = [
     name: "Financial Projection Report",
     description:
       "Revenue projections and loan-ready estimates for bank applications",
-
-    icon: LineChart,
+    icon: "📈",
     category: "Loan-Ready",
   },
 ];
@@ -96,7 +78,7 @@ const officialDocumentTemplates = [
     id: "vat-return-form",
     name: "VAT Return Form",
     description: "Official VAT return document as per IRD format",
-    icon: File,
+    icon: "📋",
     category: "Tax",
     recipient: "IRD",
   },
@@ -104,7 +86,7 @@ const officialDocumentTemplates = [
     id: "tds-statement",
     name: "TDS Deposit Statement",
     description: "Tax Deducted at Source report for IRD submission",
-    icon: FileText,
+    icon: "🧾",
     category: "Tax",
     recipient: "IRD",
   },
@@ -112,7 +94,7 @@ const officialDocumentTemplates = [
     id: "annual-tax-return",
     name: "Annual Tax Return",
     description: "Income tax computation statement for annual filing",
-    icon: FileText,
+    icon: "📑",
     category: "Tax",
     recipient: "IRD",
   },
@@ -120,7 +102,7 @@ const officialDocumentTemplates = [
     id: "profit-loss",
     name: "Profit & Loss Statement",
     description: "Official P&L statement for stakeholders and auditors",
-    icon: TrendingUp,
+    icon: "📈",
     category: "Financial",
     recipient: "Banks/Partners",
   },
@@ -128,7 +110,7 @@ const officialDocumentTemplates = [
     id: "balance-sheet",
     name: "Balance Sheet",
     description: "Statement of assets, liabilities and equity",
-    icon: Scale,
+    icon: "⚖️",
     category: "Financial",
     recipient: "Banks/Auditors",
   },
@@ -136,25 +118,9 @@ const officialDocumentTemplates = [
     id: "bank-loan-app",
     name: "Bank Loan Application",
     description: "Financial summary package for loan applications",
-    icon: LandmarkIcon,
+    icon: "🏦",
     category: "Banking",
     recipient: "Banks",
-  },
-  {
-    id: "ssf-report",
-    name: "SSF Contribution Report",
-    description: "Social Security Fund contribution statement",
-    icon: Users,
-    category: "Compliance",
-    recipient: "SSF",
-  },
-  {
-    id: "audit-package",
-    name: "Audit-Ready Package",
-    description: "Comprehensive documentation for external audit",
-    icon: Folder,
-    category: "Audit",
-    recipient: "Auditors",
   },
 ];
 
@@ -183,9 +149,9 @@ const Reports = () => {
       return;
     }
 
+    // Handle projection report separately with its own dialog
     if (templateId === "projection-report") {
       setShowProjectionDialog(true);
-
       return;
     }
 
@@ -353,7 +319,6 @@ const Reports = () => {
 
   const handleGenerateProjectionReport = async (config: ProjectionConfig) => {
     setGeneratingReport("projection-report");
-
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
@@ -361,6 +326,7 @@ const Reports = () => {
       const dateStr = now.toISOString().split("T")[0];
       const doc = generateProjectionReport(metrics, config);
       const reportName = `Financial Projection - ${config.projectionMonths}mo ${config.growthScenario} - ${dateStr}`;
+
       doc.save(`${reportName}.pdf`);
       addToRecentReports("projection-report", reportName, "Loan-Ready");
       toast.success("Projection report generated!", {
@@ -429,7 +395,7 @@ const Reports = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {officialDocumentTemplates.map((template) => {
                   const isGenerating = generatingReport === template.id;
 
@@ -439,9 +405,7 @@ const Reports = () => {
                       className="group bg-card rounded-xl border border-border p-5 hover:shadow-card hover:border-accent/30 transition-all"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="text-3xl">
-                          <template.icon className="w-8 h-8" />
-                        </div>
+                        <div className="text-3xl">{template.icon}</div>
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                             {template.category}
@@ -496,7 +460,7 @@ const Reports = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {analyticsTemplates.map((template) => {
                   const isGenerating = generatingReport === template.id;
 
@@ -506,9 +470,7 @@ const Reports = () => {
                       className="group bg-card rounded-xl border border-border p-5 hover:shadow-card hover:border-accent/30 transition-all"
                     >
                       <div className="flex items-start justify-between mb-4">
-                        <div className="text-3xl">
-                          <template.icon className="w-8 h-8" />
-                        </div>
+                        <div className="text-3xl">{template.icon}</div>
                         <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                           {template.category}
                         </span>
@@ -662,6 +624,7 @@ const Reports = () => {
         }
       />
 
+      {/* Projection Config Dialog */}
       <ProjectionConfigDialog
         open={showProjectionDialog}
         onOpenChange={setShowProjectionDialog}
