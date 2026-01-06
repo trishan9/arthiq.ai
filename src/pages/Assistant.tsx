@@ -8,13 +8,13 @@ import {
   Paperclip,
   RefreshCw,
   AlertCircle,
-  Languages,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import { useDocuments } from "@/hooks/useDocuments";
+import { useCredibilityScore } from "@/hooks/use-credibility-score";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
@@ -73,14 +73,14 @@ declare global {
 }
 
 const suggestedQuestions = [
-  "What's my current cashflow status?",
-  "How much VAT do I owe this quarter?",
-  "Explain my expense breakdown",
-  "What are the upcoming tax deadlines in Nepal?",
-  "Calculate my profit margin",
-  "How can I reduce my tax liability legally?",
-  "What TDS rates apply to my business?",
-  "Explain Nepal's income tax slabs",
+  "How can I improve my credibility score?",
+  "What documents should I upload to build trust?",
+  "How do I reach Trust Tier 3?",
+  "What are Nepal's VAT compliance requirements?",
+  "How can my business become loan-ready?",
+  "What financial documents do lenders look for?",
+  "How to reduce anomalies in my records?",
+  "What makes a strong credibility packet?",
 ];
 
 const CHAT_URL = `${
@@ -93,7 +93,7 @@ const Assistant = () => {
       id: "1",
       role: "assistant",
       content:
-        "नमस्ते! I'm ArthiqAI, your financial advisor. I analyze your uploaded documents and provide precise advice based on Nepal's tax laws.\n\nAsk me about VAT, income tax, TDS, or your financial metrics.",
+        "नमस्ते! I'm your Credibility Advisor. I help SMEs like yours improve financial credibility under Nepal's rules.\n\nAsk me how to boost your trust tier, become loan-ready, or meet compliance requirements for your business type.",
       timestamp: new Date(),
     },
   ]);
@@ -108,6 +108,7 @@ const Assistant = () => {
 
   const { metrics } = useFinancialData();
   const { documents } = useDocuments();
+  const { credibilityScore } = useCredibilityScore();
 
   // Initialize speech recognition
   useEffect(() => {
@@ -263,13 +264,48 @@ const Assistant = () => {
             ? (netProfit / metrics.totalRevenue) * 100
             : 0;
 
+        // Build credibility context for the AI
+        const hasBankStatements = documents.some(
+          (d) => d.document_type === "bank_statement"
+        );
+        const hasVatDocs = documents.some(
+          (d) =>
+            d.document_type === "tax_document" ||
+            d.file_name?.toLowerCase().includes("vat") ||
+            d.file_name?.toLowerCase().includes("pan")
+        );
+
+        // Count months of data from documents
+        const monthsSet = new Set<string>();
+        documents.forEach((doc) => {
+          if (doc.created_at) {
+            monthsSet.add(doc.created_at.substring(0, 7));
+          }
+        });
+
+        const credibilityContext = {
+          score: credibilityScore.totalScore,
+          tier: credibilityScore.trustTier.tier,
+          tierLabel: credibilityScore.trustTier.label,
+          documentCount: documents.length,
+          proofCount: credibilityScore.dataPoints,
+          anomalyCount: credibilityScore.anomalies.length,
+          hasVatDocs,
+          hasBankStatements,
+          monthsOfData: monthsSet.size,
+          financialHealth: metrics.financialHealthScore,
+          evidenceQuality: credibilityScore.evidenceQuality.score,
+          stabilityGrowth: credibilityScore.stabilityGrowth.score,
+          complianceReadiness: credibilityScore.complianceReadiness.score,
+        };
+
         const financialContext = {
           metrics: {
             totalRevenue: metrics.totalRevenue,
             totalExpenses: metrics.totalExpenses,
             netProfit,
             profitMargin,
-            outstandingReceivables: 0, // Would need to track this separately
+            outstandingReceivables: 0,
             financialHealthScore: metrics.financialHealthScore,
             documentCount: metrics.documentCount,
             monthlyData: metrics.monthlyData,
@@ -294,6 +330,7 @@ const Assistant = () => {
           body: JSON.stringify({
             messages: userMessages,
             financialContext,
+            credibilityContext,
           }),
         });
 
@@ -372,7 +409,7 @@ const Assistant = () => {
         );
       }
     },
-    [metrics, documents]
+    [metrics, documents, credibilityScore]
   );
 
   const handleSend = async () => {
@@ -452,7 +489,7 @@ const Assistant = () => {
         id: "1",
         role: "assistant",
         content:
-          "नमस्ते! I'm ArthiqAI, your financial advisor. I analyze your uploaded documents and provide precise advice based on Nepal's tax laws.\n\nAsk me about VAT, income tax, TDS, or your financial metrics.",
+          "नमस्ते! I'm your Credibility Advisor. I help SMEs like yours improve financial credibility under Nepal's rules.\n\nAsk me how to boost your trust tier, become loan-ready, or meet compliance requirements for your business type.",
         timestamp: new Date(),
       },
     ]);
@@ -463,8 +500,8 @@ const Assistant = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <DashboardHeader
-        title="AI Financial Advisor"
-        subtitle="Intelligent insights based on your data & Nepal regulations"
+        title="Credibility Advisor"
+        subtitle="Get personalized advice to improve your business credibility under Nepal's financial rules"
         showSearch={false}
       />
 
@@ -475,11 +512,11 @@ const Assistant = () => {
             <AlertCircle className="w-5 h-5 text-accent mt-0.5" />
             <div>
               <p className="text-sm font-medium text-foreground">
-                Upload documents for personalized advice
+                Upload documents to get personalized credibility advice
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Upload invoices, bank statements, and financial documents to get
-                AI insights tailored to your business.
+                Upload bank statements, VAT returns, and invoices so I can
+                analyze your business and suggest specific improvements.
               </p>
             </div>
           </div>
@@ -633,7 +670,7 @@ const Assistant = () => {
                     ? speechLang === "ne-NP"
                       ? "सुन्दैछु..."
                       : "Listening..."
-                    : "Ask about your finances, Nepal tax rules, compliance..."
+                    : "Ask how to improve credibility for your business..."
                 }
                 className="w-full bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground py-3"
               />
@@ -702,9 +739,9 @@ const Assistant = () => {
         </div>
 
         <p className="text-xs text-center text-muted-foreground mt-3">
-          ArthiqAI provides advice based on your data and Nepal's regulations.
-          Always verify important financial decisions with a certified
-          professional.
+          Your Credibility Advisor provides guidance based on your documents and
+          Nepal's financial regulations. Always verify important decisions with
+          a certified professional.
         </p>
       </div>
     </div>

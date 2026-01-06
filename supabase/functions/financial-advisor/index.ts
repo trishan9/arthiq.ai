@@ -4,7 +4,6 @@ import {
   NEPAL_TAX_DATA,
   NEPAL_LABOR_LAW,
   calculateTaxEstimates,
-  calculateSSF,
 } from "../_shared/nepalKnowledge.ts";
 
 const corsHeaders = {
@@ -13,13 +12,157 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Trust tier definitions
+const TRUST_TIERS = [
+  {
+    tier: 1,
+    label: "Basic",
+    minScore: 0,
+    requirements: [
+      "Upload at least 3 financial documents",
+      "Complete business profile",
+    ],
+  },
+  {
+    tier: 2,
+    label: "Verified",
+    minScore: 40,
+    requirements: [
+      "6+ months of bank statements",
+      "Valid VAT/PAN registration",
+      "No major anomalies",
+    ],
+  },
+  {
+    tier: 3,
+    label: "Trusted",
+    minScore: 65,
+    requirements: [
+      "12+ months transaction history",
+      "Clean VAT filing record",
+      "Positive cash flow trend",
+    ],
+  },
+  {
+    tier: 4,
+    label: "Premium",
+    minScore: 85,
+    requirements: [
+      "2+ years financial history",
+      "Blockchain-verified proofs",
+      "Strong financial health score",
+    ],
+  },
+];
+
+// Calculate credibility gaps and recommendations
+function getCredibilityAnalysis(credibilityData: any) {
+  const score = credibilityData?.score || 0;
+  const tier = credibilityData?.tier || 1;
+  const documentCount = credibilityData?.documentCount || 0;
+  const proofCount = credibilityData?.proofCount || 0;
+  const anomalyCount = credibilityData?.anomalyCount || 0;
+  const hasVatDocs = credibilityData?.hasVatDocs || false;
+  const hasBankStatements = credibilityData?.hasBankStatements || false;
+  const monthsOfData = credibilityData?.monthsOfData || 0;
+  const financialHealth = credibilityData?.financialHealth || 0;
+
+  const currentTier =
+    TRUST_TIERS.find((t) => t.tier === tier) || TRUST_TIERS[0];
+  const nextTier = TRUST_TIERS.find((t) => t.tier === tier + 1);
+
+  const gaps: string[] = [];
+  const recommendations: string[] = [];
+  const strengths: string[] = [];
+
+  // Analyze document gaps
+  if (documentCount < 3) {
+    gaps.push(
+      `Only ${documentCount} documents uploaded (need 3+ for basic verification)`
+    );
+    recommendations.push(
+      "Upload at least 3 financial documents (invoices, bank statements, VAT returns)"
+    );
+  } else {
+    strengths.push(`${documentCount} documents uploaded`);
+  }
+
+  if (!hasBankStatements) {
+    gaps.push("No bank statements uploaded");
+    recommendations.push(
+      "Upload 6+ months of bank statements for transaction verification"
+    );
+  } else if (monthsOfData < 6) {
+    gaps.push(`Only ${monthsOfData} months of bank data (need 6+ for Tier 2)`);
+    recommendations.push(
+      `Upload ${6 - monthsOfData} more months of bank statements`
+    );
+  } else {
+    strengths.push(`${monthsOfData} months of bank statement history`);
+  }
+
+  if (!hasVatDocs) {
+    gaps.push("No VAT/PAN documentation");
+    recommendations.push(
+      "Upload VAT registration certificate or PAN card for compliance verification"
+    );
+  } else {
+    strengths.push("VAT/PAN documentation verified");
+  }
+
+  // Analyze anomalies
+  if (anomalyCount > 0) {
+    gaps.push(`${anomalyCount} anomalies detected in financial records`);
+    recommendations.push(
+      "Review and resolve flagged anomalies in your documents"
+    );
+  } else {
+    strengths.push("No anomalies in financial records");
+  }
+
+  // Analyze blockchain proofs
+  if (proofCount === 0 && tier < 4) {
+    gaps.push("No blockchain-verified proofs created");
+    recommendations.push(
+      "Create blockchain proofs of key financial metrics for Tier 4"
+    );
+  } else if (proofCount > 0) {
+    strengths.push(`${proofCount} blockchain-verified proof(s)`);
+  }
+
+  // Financial health analysis
+  if (financialHealth < 50) {
+    gaps.push(`Financial health score is low (${financialHealth}/100)`);
+    recommendations.push(
+      "Improve cash flow and reduce expense-to-revenue ratio"
+    );
+  } else if (financialHealth >= 70) {
+    strengths.push(`Strong financial health (${financialHealth}/100)`);
+  }
+
+  // Points needed for next tier
+  const pointsToNextTier = nextTier ? nextTier.minScore - score : 0;
+
+  return {
+    currentScore: score,
+    currentTier: tier,
+    currentTierLabel: currentTier.label,
+    nextTierLabel: nextTier?.label || "Maximum",
+    pointsToNextTier,
+    gaps,
+    recommendations: recommendations.slice(0, 3), // Top 3 recommendations
+    strengths,
+    nextTierRequirements: nextTier?.requirements || [],
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, financialContext } = await req.json();
+    const { messages, financialContext, credibilityContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -32,13 +175,57 @@ serve(async (req) => {
     // Build context from financial data
     let businessContext = "";
 
+    // Helper functions for safe number handling
+    const safeNumber = (val: any) =>
+      typeof val === "number" && !isNaN(val) ? val : 0;
+    const formatNum = (val: any) => safeNumber(val).toLocaleString();
+
+    // Add credibility context
+    let credibilityAnalysis = "";
+    if (credibilityContext) {
+      const analysis = getCredibilityAnalysis(credibilityContext);
+
+      credibilityAnalysis = `\n## SME Credibility Profile\n`;
+      credibilityAnalysis += `- **Current Score**: ${analysis.currentScore}/100\n`;
+      credibilityAnalysis += `- **Trust Tier**: ${analysis.currentTier} (${analysis.currentTierLabel})\n`;
+
+      if (analysis.pointsToNextTier > 0) {
+        credibilityAnalysis += `- **Next Tier**: ${analysis.nextTierLabel} (need ${analysis.pointsToNextTier} more points)\n`;
+      } else {
+        credibilityAnalysis += `- **Status**: Maximum trust tier achieved!\n`;
+      }
+
+      if (analysis.strengths.length > 0) {
+        credibilityAnalysis += `\n### Credibility Strengths\n`;
+        analysis.strengths.forEach((s) => {
+          credibilityAnalysis += `✓ ${s}\n`;
+        });
+      }
+
+      if (analysis.gaps.length > 0) {
+        credibilityAnalysis += `\n### Credibility Gaps (Action Required)\n`;
+        analysis.gaps.forEach((g) => {
+          credibilityAnalysis += `⚠️ ${g}\n`;
+        });
+      }
+
+      if (analysis.recommendations.length > 0) {
+        credibilityAnalysis += `\n### Top Recommendations to Improve Score\n`;
+        analysis.recommendations.forEach((r, i) => {
+          credibilityAnalysis += `${i + 1}. ${r}\n`;
+        });
+      }
+
+      if (analysis.nextTierRequirements.length > 0) {
+        credibilityAnalysis += `\n### Requirements for ${analysis.nextTierLabel} Tier\n`;
+        analysis.nextTierRequirements.forEach((r) => {
+          credibilityAnalysis += `- ${r}\n`;
+        });
+      }
+    }
+
     if (financialContext) {
       const { metrics, documents, recentTransactions } = financialContext;
-
-      // Helper functions for safe number handling
-      const safeNumber = (val: any) =>
-        typeof val === "number" && !isNaN(val) ? val : 0;
-      const formatNum = (val: any) => safeNumber(val).toLocaleString();
 
       if (metrics) {
         businessContext += `\n## Current Business Financial Status\n`;
@@ -163,13 +350,13 @@ serve(async (req) => {
 - Annual Return: ${NEPAL_TAX_DATA.fiscal_calendar.annual_return_due}
 `;
 
-    const systemPrompt = `You are ArthiqAI, a precise financial advisor for Nepal. Your responses must be CONCISE, DATA-DRIVEN, and ACTIONABLE.
+    const systemPrompt = `You are a Credibility Advisor for SMEs in Nepal. Your role is to help businesses improve their financial credibility for loan applications and marketplace trust.
 
 ## RESPONSE RULES (MANDATORY)
 1. BE BRIEF: Maximum 3-4 short paragraphs. Use bullet points for lists.
-2. USE ACTUAL DATA: Always reference the user's specific numbers when available.
-3. CITE REGULATIONS: Quote exact rates, thresholds, and deadlines from Nepal law.
-4. NO FILLER: Skip generic advice. Every sentence must add value.
+2. USE ACTUAL DATA: Always reference the user's specific credibility score, tier, and gaps.
+3. PRIORITIZE CREDIBILITY: Focus on improving trust tier and loan-readiness.
+4. CITE REGULATIONS: Quote exact rates, thresholds, and requirements from Nepal law.
 5. ANSWER DIRECTLY: Start with the direct answer, then provide context.
 
 ## Nepal Financial Regulations
@@ -177,29 +364,47 @@ ${nepalRegulations}
 
 ${quickReference}
 
+${
+  credibilityAnalysis ||
+  "## Credibility Status\nNo credibility data available. Upload documents to get your credibility score."
+}
+
 ## User's Business Data
 ${
   businessContext ||
-  "No documents uploaded. To get personalized advice, upload invoices, bank statements, or tax documents."
+  "No documents uploaded. Upload invoices, bank statements, and VAT returns to build your credibility profile."
 }
+
+## Response Focus Areas
+When asked about credibility improvement:
+1. Reference their CURRENT tier and score
+2. Identify SPECIFIC gaps blocking tier advancement
+3. Give ACTIONABLE steps with expected point gains
+4. Explain how each action improves loan-readiness
+
+When asked about loan readiness:
+1. List documents lenders require in Nepal
+2. Explain how credibility score affects loan approval
+3. Highlight any compliance gaps (VAT, PAN, etc.)
+
+## Trust Tier System Explanation
+- Tier 1 (Basic): New businesses, minimal verification
+- Tier 2 (Verified): 6+ months history, VAT compliant
+- Tier 3 (Trusted): 12+ months, clean records, positive trends
+- Tier 4 (Premium): 2+ years, blockchain proofs, excellent health
 
 ## Response Format
 - Start with a DIRECT answer to the question
+- Reference their current credibility score and tier
 - Use NPR (Nepali Rupees) for all amounts
-- Reference specific data from uploaded documents
-- Cite exact tax rates, deadlines (in Bikram Sambat)
-- End with ONE actionable next step
+- End with ONE actionable next step with expected impact
 
-## What NOT to do
-- No long introductions or pleasantries
-- No repeating the question
-- No generic advice that doesn't use their data
-- No disclaimers in every response (one small note at end only if critical)
-
-You are their trusted accountant. Be direct, precise, and helpful.`;
+You are their trusted credibility advisor. Be direct, precise, and action-oriented.`;
 
     console.log(
-      "Sending request to Lovable AI with context length:",
+      "Sending request to Lovable AI with credibility context length:",
+      credibilityAnalysis.length,
+      "business context length:",
       businessContext.length
     );
 
